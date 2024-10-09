@@ -1,0 +1,4 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/cf45a889-115a-4d02-865f-919ab62bc1d0/resourceGroups/appsvc_linux_centralus_basic/providers/Microsoft.Web/sites/RetailMediaNexta",
+    "appService.deploySubpath": "."
+}
