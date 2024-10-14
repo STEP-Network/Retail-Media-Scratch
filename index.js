@@ -18,7 +18,7 @@ app.post('/receive-nexta-content', (req, res) => {
     if (nextaContent) {
         console.log('Received nextaContent:', nextaContent);
         // Further processing...
-        res.status(200).send('nextaContent received successfully: ' + nextaContent);
+        res.status(200).send('nextaContent received successfully: ' + JSON.stringify(nextaContent));
     } else {
         res.status(400).send('nextaContent is missing');
     }
