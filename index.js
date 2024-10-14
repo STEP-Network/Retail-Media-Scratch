@@ -1,7 +1,10 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const puppeteer = require('puppeteer');
+const axios = require('axios');
 const app = express();
+const PORT = process.env.PORT || 3000;
 
 app.use(cors({
     origin: '*'
@@ -12,6 +15,80 @@ app.use(express.json());
 app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+app.get('/ad-content', async (req, res) => {
+    try {
+        // Launch Puppeteer
+        const browser = await puppeteer.launch({ headless: true });
+        const page = await browser.newPage();
+
+        // Load the HTML page with your Google Ad Manager setup
+        await page.setContent(`
+            <html>
+            <head>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
+                <meta name="description" content="Display a fixed-sized test ad." />
+                <title>Display a test ad</title>
+                <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js" crossorigin="anonymous"></script>
+                <script>
+                    window.googletag = window.googletag || { cmd: [] };
+
+                    googletag.cmd.push(() => {
+                        // Define an ad slot for div with id "banner-ad".
+                        googletag
+                            .defineSlot("/21809957681/step/stepclient.dk/matas_test", [1, 1], "banner-ad")
+                            .addService(googletag.pubads());
+
+                        // Enable the PubAdsService.
+                        googletag.enableServices();
+                    });
+                </script>
+            </head>
+            <body>
+                <div id="ad_slot">
+                    <p>Annonce</p>
+                    <div id="banner-ad"></div>
+                    <script>
+                        googletag.cmd.push(() => {
+                            // Request and render an ad for the "banner-ad" slot.
+                            googletag.display("banner-ad");
+                        });
+                    </script>
+                </div>
+            </body>
+            </html>
+        `);
+
+        // Wait for the iframe to load inside the banner-ad div
+        await page.waitForSelector('#banner-ad iframe');
+
+        // Get the iframe element and switch to its context
+        const frame = await page.frames().find(frame => frame.url().includes('doubleclick')); // Adjust the condition to match the iframe's URL
+        
+        if (!frame) {
+            throw new Error('Iframe with ad content not found');
+        }
+
+        // Wait for the content inside the iframe to load (e.g., the specific element that contains nextaContent)
+        await frame.waitForSelector('desired-element-selector'); // Replace with the actual selector for the element containing nextaContent
+
+        // Extract the nextaContent data
+        const nextaContent = await frame.evaluate(() => {
+            const adDataElement = document.querySelector('desired-element-selector'); // Replace with the actual element selector
+            return adDataElement ? adDataElement.textContent : null;
+        });
+
+        await browser.close();
+
+        // Send the retrieved content as JSON
+        res.json({ nextaContent });
+    } catch (err) {
+        console.error('Error fetching ad content:', err);
+        res.status(500).send('Error fetching ad content');
+    }
+});
+
 app.post('/receive-nexta-content', (req, res) => {
     console.log('Received nextaContent:', JSON.stringify(req.body));
     const { nextaContent } = req.body;
@@ -24,7 +101,14 @@ app.post('/receive-nexta-content', (req, res) => {
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Server running on port ${PORT}`);
+
+    // Call the /ad-content route on server startup
+    try {
+        const response = await axios.get(`https://testingretailmedia.azurewebsites.net/ad-content`);
+        console.log('Ad Content:', response.data);
+    } catch (err) {
+        console.error('Error calling /ad-content on startup:', err.message);
+    }
 });
