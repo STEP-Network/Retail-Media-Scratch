@@ -121,7 +121,7 @@ app.get('/ad-content', async (req, res) => {
         res.json({ nextaContent });
     } catch (err) {
         console.error('Error fetching ad content:', err);
-        res.status(500).send('Error fetching ad content: ');
+        res.status(500).send('Error fetching ad content: ' + message);
     }
 });
 
