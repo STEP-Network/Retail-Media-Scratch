@@ -10,7 +10,6 @@ app.use(cors({
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    // res.send("Hello, World");
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 app.post('/receive-nexta-content', (req, res) => {
@@ -19,7 +18,7 @@ app.post('/receive-nexta-content', (req, res) => {
     if (nextaContent) {
         console.log('Received nextaContent:', nextaContent);
         // Further processing...
-        res.status(200).send('nextaContent received successfully');
+        res.status(200).send('nextaContent received successfully: ' + nextaContent);
     } else {
         res.status(400).send('nextaContent is missing');
     }
