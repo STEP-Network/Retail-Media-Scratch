@@ -3,14 +3,16 @@ const cors = require('cors');
 const path = require('path');
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: '*'
+}));
+
 app.use(express.json());
 
 app.get("/", (req, res) => {
     // res.send("Hello, World");
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
-
 app.post('/receive-nexta-content', (req, res) => {
     console.log('Received nextaContent:', JSON.stringify(req.body));
     const { nextaContent } = req.body;
