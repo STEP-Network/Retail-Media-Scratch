@@ -16,6 +16,23 @@ app.get("/", (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Function to poll for the iframe until it is found or times out
+async function waitForIframe(page, selector, timeout = 30000) {
+    const pollingInterval = 1000; // Poll every second
+    const startTime = Date.now();
+
+    while (Date.now() - startTime < timeout) {
+        const frame = page.frames().find(frame => frame.url().includes('doubleclick')); // Adjust as needed
+        if (frame) {
+            return frame;
+        }
+        // Wait for the next polling cycle
+        await new Promise(resolve => setTimeout(resolve, pollingInterval));
+    }
+
+    throw new Error('Iframe with ad content not found after waiting');
+}
+
 app.get('/ad-content', async (req, res) => {
     try {
         // Launch Puppeteer
@@ -63,21 +80,31 @@ app.get('/ad-content', async (req, res) => {
         // Wait for the iframe to load inside the banner-ad div
         await page.waitForSelector('#banner-ad iframe');
 
+        console.log('Iframe loaded');
+
         // Get the iframe element and switch to its context
         const frame = await page.frames().find(frame => frame.url().includes('doubleclick')); // Adjust the condition to match the iframe's URL
         
+        console.log('Frame found:', frame);
+
         if (!frame) {
             throw new Error('Iframe with ad content not found');
         }
 
         // Wait for the content inside the iframe to load (e.g., the specific element that contains nextaContent)
-        await frame.waitForSelector('desired-element-selector'); // Replace with the actual selector for the element containing nextaContent
+        await frame.waitForSelector('.GoogleActiveViewElement');
+
+        console.log('Content loaded inside the iframe');
 
         // Extract the nextaContent data
         const nextaContent = await frame.evaluate(() => {
-            const adDataElement = document.querySelector('desired-element-selector'); // Replace with the actual element selector
+            console.log('Extracting nextaContent');
+            const adDataElement = document.querySelector('.GoogleActiveViewElement');
+            console.log('Ad Data Element:', adDataElement);
             return adDataElement ? adDataElement.textContent : null;
         });
+
+        console.log('Nexta Content:', JSON.stringify(nextaContent));
 
         await browser.close();
 
